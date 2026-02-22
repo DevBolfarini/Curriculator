@@ -44,10 +44,14 @@ Dashboard MIS: Visualização clara de métricas como "Total Enviado", "Vagas Gu
 🚀 Como Executar o Projeto
 
 Clone o repositório:
-Bash git clone https://github.com/DevBolfarini/gerador_cv.git
+```bash
+git clone https://github.com/DevBolfarini/gerador_cv.git
+```
 
 Instale as dependências:
-Bash pip install -r requirements.txt
+```bash 
+pip install -r requirements.txt
+```
 
 Configuração de Ambiente:
 Crie um arquivo .env na raiz.
@@ -55,6 +59,9 @@ Crie um arquivo .env na raiz.
 Adicione sua chave: GOOGLE_API_KEY=SUA_CHAVE_AQUI.
 
 Inicie a aplicação:
-Bash streamlit run app.py
+```bash 
+streamlit run app.py
+```
+
 
 Denis Bolfarini | LinkedIn | Estudante de Ciência da Computação (UNIVESP)
