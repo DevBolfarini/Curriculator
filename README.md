@@ -1,4 +1,4 @@
-🤖 Alia IA - Curriculator (v4.2.3)
+🤖 Curriculator
 Ecossistema de Automação de Carreira: Da Análise Semântica de Vagas à Gestão de Candidaturas.
 
 Este projeto é uma solução de Engenharia de Software e Data Analytics desenvolvida para automatizar a personalização de currículos técnicos. Utilizando Inteligência Artificial (LLM), o sistema analisa requisitos de vagas em tempo real e gera documentos otimizados, mantendo um pipeline de dados estruturado para gestão de carreira.
