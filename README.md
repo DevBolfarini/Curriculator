@@ -25,6 +25,15 @@ database.py: Camada de persistência que isola toda a lógica de comunicação c
 
 services.py: Motor de inteligência que processa prompts dinâmicos e renderiza os currículos no padrão SempreIT.
 
+graph TD
+    A[LinkedIn PDF / Currículo Mestre] -->|Ingestão| B(services.py)
+    C[Descrição da Vaga] -->|Input Usuário| B
+    B -->|Prompt Engineering| D{Google Gemini 2.5 Flash}
+    D -->|Análise Semântica| E[Perfil Otimizado]
+    E -->|Persistência| F[(SQLite Database)]
+    E -->|Renderização| G[Currículo PDF Customizado]
+    F -->|Visualização| H[Dashboard Streamlit]
+
 📊 Funcionalidades e Diferenciais Técnicos
 Análise Semântica via IA: Processamento de descrições de vagas para identificação automática de keywords e competências N1/N2/N3.
 
