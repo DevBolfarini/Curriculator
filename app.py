@@ -53,12 +53,15 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                 try:
                     status_ui.write("📤 Analisando linkedin.pdf...")
                     arquivo_cv = cliente.files.upload(file="linkedin.pdf")
-                    
+
                     prompt = obter_prompt(canal, empresa, cargo)
-                    
+
                     status_ui.write("⚙️ Consultando Gemini...")
-                    resposta = cliente.models.generate_content(model='gemini-2.5-flash', contents=[arquivo_cv, prompt, texto_vaga])
-                    
+                    resposta = cliente.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=[arquivo_cv, prompt, texto_vaga],
+                    )
+
                     status_reg = f"Enviado ({canal})"
                     path_pdf = "N/A"
 
@@ -66,14 +69,24 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                         st.subheader("✨ Texto para Gupy:")
                         st.text_area("Copie:", value=resposta.text, height=300)
                     else:
-                        status_ui.write("🎨 Tratando dados e gerando modelo SempreIT...")
-                        
+                        status_ui.write(
+                            "🎨 Tratando dados e gerando modelo SempreIT..."
+                        )
+
                         # Limpeza de JSON (Hotfix de Parse)
                         conteudo_bruto = resposta.text.strip()
                         if "```json" in conteudo_bruto:
-                            conteudo_limpo = conteudo_bruto.split("```json")[1].split("```")[0].strip()
+                            conteudo_limpo = (
+                                conteudo_bruto.split("```json")[1]
+                                .split("```")[0]
+                                .strip()
+                            )
                         elif "```" in conteudo_bruto:
-                            conteudo_limpo = conteudo_bruto.split("```")[1].split("```")[0].strip()
+                            conteudo_limpo = (
+                                conteudo_bruto.split("```")[1]
+                                .split("```")[0]
+                                .strip()
+                            )
                         else:
                             conteudo_limpo = conteudo_bruto
 
@@ -81,13 +94,17 @@ with st.expander("📝 Nova Candidatura", expanded=True):
 
                         if "E-mail" in canal:
                             st.subheader("📧 Sugestão de E-mail:")
-                            st.text_area("Copie:", value=dados_json.get('email_corpo', ''), height=150)
+                            st.text_area(
+                                "Copie:",
+                                value=dados_json.get("email_corpo", ""),
+                                height=150,
+                            )
 
                         # GERAÇÃO DO PDF NOVO (SERVICES.PY)
                         path_pdf = gerar_pdf(dados_json, empresa)
-                        
-                        st.success(f"✅ Currículo gerado com sucesso!")
-                        
+
+                        st.success("✅ Currículo gerado com sucesso!")
+
                         # BOTÃO DE DOWNLOAD FIXO
                         with open(path_pdf, "rb") as f:
                             st.download_button(
@@ -95,47 +112,54 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                                 data=f,
                                 file_name=os.path.basename(path_pdf),
                                 mime="application/pdf",
-                                key="download_btn_final"
+                                key="download_btn_final",
                             )
 
                     # Salva no Banco de Dados
                     db.add_candidatura(empresa, cargo, status_reg, path_pdf)
                     status_ui.update(label="✅ Pipeline Concluído!", state="complete")
-                    
+
                     # Botão para resetar a tela manualmente, evitando sumir o download
                     if st.button("🔄 Finalizar e Atualizar Dashboard"):
                         st.rerun()
 
-                except Exception as e:
-                    st.error(f"❌ Erro no processamento: {e}")
+                except Exception as err:
+                    st.error(f"❌ Erro no processamento: {err}")
 
 # 4. GESTÃO DE DADOS (DASHBOARD E CRUD)
 if not df.empty:
     col_graph, col_manage = st.columns([2, 1])
-    
+
     with col_graph:
         st.subheader("📈 Volume Diário")
-        df_c = df['data'].value_counts().reset_index()
-        df_c.columns = ['data', 'candidaturas']
-        fig = px.bar(df_c.sort_values('data'), x='data', y='candidaturas', color_discrete_sequence=['#1a3a5a'])
-        fig.update_layout(xaxis_type='category', yaxis_range=[0, 10], height=350)
+        df_c = df["data"].value_counts().reset_index()
+        df_c.columns = ["data", "candidaturas"]
+        fig = px.bar(
+            df_c.sort_values("data"),
+            x="data",
+            y="candidaturas",
+            color_discrete_sequence=["#1a3a5a"],
+        )
+        fig.update_layout(xaxis_type="category", yaxis_range=[0, 10], height=350)
         st.plotly_chart(fig, use_container_width=True)
 
     with col_manage:
         st.subheader("🛠️ Gestão")
-        df['Display'] = df['id'].astype(str) + " - " + df['empresa']
-        selecao = st.selectbox("Selecione um registro:", df['Display'].tolist())
+        df["Display"] = df["id"].astype(str) + " - " + df["empresa"]
+        selecao = st.selectbox("Selecione um registro:", df["Display"].tolist())
         id_sel = int(selecao.split(" - ")[0])
-        
+
         c1, c2 = st.columns(2)
         if c1.button("❌ EXCLUIR"):
             db.delete_reg(id_sel)
             st.rerun()
-            
-        novo_st = st.selectbox("Status:", ["Enviado", "Entrevista", "Teste", "Reprovado", "Contratado"])
+
+        novo_st = st.selectbox(
+            "Status:", ["Enviado", "Entrevista", "Teste", "Reprovado", "Contratado"]
+        )
         if st.button("✅ SALVAR"):
             db.update_status(id_sel, novo_st)
             st.rerun()
 
     st.subheader("📋 Histórico Completo (SQLite)")
-    st.dataframe(df.drop(columns=['Display']).iloc[::-1], use_container_width=True)
+    st.dataframe(df.drop(columns=["Display"]).iloc[::-1], use_container_width=True)
