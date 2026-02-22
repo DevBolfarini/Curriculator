@@ -7,7 +7,7 @@ import plotly.express as px
 
 # Importando os módulos do projeto modularizado
 from database import DatabaseManager
-from services import gerar_pdf, obter_prompt
+from services import gerar_pdf, obter_prompt, obter_prompt_gupy
 
 # 1. SETUP, SEGURANÇA E AMBIENTE
 load_dotenv()
@@ -58,29 +58,149 @@ with st.expander("📝 Nova Candidatura", expanded=True):
         if not empresa or not cargo or not texto_vaga:
             st.warning("Preencha todos os campos obrigatórios.")
         else:
-            with st.status(
-                "🧠 Curriculator em execução...",
-                expanded=True
-            ) as status_ui:
-                try:
-                    status_ui.write("📤 Analisando linkedin.pdf...")
-                    arquivo_cv = cliente.files.upload(file="linkedin.pdf")
+            # Fluxo Gupy simplificado: usa o PDF linkedin.pdf
+            # como fonte da experiência
+            if "Gupy" in canal:
+                with st.status(
+                    "🧠 Curriculator em execução...",
+                    expanded=True
+                ) as status_ui:
+                    try:
+                        status_ui.write("📤 Analisando linkedin.pdf...")
+                        arquivo_cv = cliente.files.upload(file="linkedin.pdf")
 
-                    prompt = obter_prompt(canal, empresa, cargo)
+                        prompt_gupy = obter_prompt_gupy(
+                            "", texto_vaga
+                        )
 
-                    status_ui.write("⚙️ Consultando Gemini...")
-                    resposta = cliente.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents=[arquivo_cv, prompt, texto_vaga],
-                    )
+                        status_ui.write("⚙️ Consultando Gemini...")
+                        resposta = cliente.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=[arquivo_cv, prompt_gupy],
+                        )
 
-                    status_reg = f"Enviado ({canal})"
-                    path_pdf = "N/A"
+                        status_reg = f"Enviado ({canal})"
 
-                    if "Gupy" in canal:
+                        def clean_ai_response(text: str) -> str:
+                            # remove code fences
+                            import re
+
+                            t = re.sub(r"```[\s\S]*?```", "", text)
+                            # remove markdown fences or leading/trailing dashes
+                            t = t.strip().lstrip("-\n ")
+
+                            # remove common assistant-opening lines
+                            lines = t.splitlines()
+                            skip_prefixes = (
+                                "Olá",
+                                "Oi",
+                                "Perfeito",
+                                "Excelente",
+                                "Com certeza",
+                                "Claro",
+                                "Certo",
+                                "Posso",
+                                "Vou",
+                                "Pronto",
+                            )
+                            i = 0
+                            for i, ln in enumerate(lines):
+                                lstr = ln.strip()
+                                if not lstr:
+                                    continue
+                                if any(
+                                    lstr.lower().startswith(p.lower())
+                                    for p in skip_prefixes
+                                ):
+                                    continue
+                                # if line contains obvious assistant verbs,
+                                # skip
+                                assistant_verbs = (
+                                    "vamos", "analis", "vou", "posso", "ajudar"
+                                )
+                                if any(
+                                    w in lstr.lower()
+                                    for w in assistant_verbs
+                                ):
+                                    continue
+                                # otherwise, stop skipping
+                                break
+
+                            cleaned_lines = lines[i:]
+
+                            # remove trailing assistant questions/CTAs
+                            # (linhas finais interrogativas)
+                            trailing_patterns = [
+                                r"^(.*\?)$",
+                                (
+                                    r"^(deseja|quer|gostaria|posso|"
+                                    r"precisa|querer|queria)\b"
+                                ),
+                                r"^(se quiser|se desejar)\b",
+                            ]
+
+                            import re as _re
+
+                            # drop lines from end while they match
+                            # trailing patterns
+                            while cleaned_lines:
+                                last = cleaned_lines[-1].strip()
+                                if not last:
+                                    cleaned_lines.pop()
+                                    continue
+                                matched = False
+                                for pat in trailing_patterns:
+                                    if _re.search(pat, last, _re.IGNORECASE):
+                                        matched = True
+                                        break
+                                if matched:
+                                    cleaned_lines.pop()
+                                else:
+                                    break
+
+                            cleaned = "\n".join(cleaned_lines).strip()
+
+                            return cleaned
+
+                        texto_limpo = clean_ai_response(resposta.text)
+
                         st.subheader("✨ Texto para Gupy:")
-                        st.text_area("Copie:", value=resposta.text, height=300)
-                    else:
+                        st.text_area("Copie:", value=texto_limpo, height=300)
+
+                        db.add_candidatura(empresa, cargo, status_reg, "N/A")
+
+                        status_ui.update(
+                            label="✅ Pipeline Concluído!",
+                            state="complete"
+                        )
+
+                        if st.button("🔄 Finalizar e Atualizar Dashboard"):
+                            st.rerun()
+
+                    except Exception as err:
+                        st.error(f"❌ Erro no processamento: {err}")
+
+            else:
+                # Fluxo original para não-Gupy (PDF -> JSON -> PDF)
+                with st.status(
+                    "🧠 Curriculator em execução...",
+                    expanded=True
+                ) as status_ui:
+                    try:
+                        status_ui.write("📤 Analisando linkedin.pdf...")
+                        arquivo_cv = cliente.files.upload(file="linkedin.pdf")
+
+                        prompt = obter_prompt(canal, empresa, cargo)
+
+                        status_ui.write("⚙️ Consultando Gemini...")
+                        resposta = cliente.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=[arquivo_cv, prompt, texto_vaga],
+                        )
+
+                        status_reg = f"Enviado ({canal})"
+                        path_pdf = "N/A"
+
                         status_ui.write(
                             "🎨 Tratando dados e gerando modelo SempreIT..."
                         )
@@ -124,19 +244,21 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                                 key="download_btn_final",
                             )
 
-                    # Salva no Banco de Dados
-                    db.add_candidatura(empresa, cargo, status_reg, path_pdf)
-                    status_ui.update(
-                        label="✅ Pipeline Concluído!", state="complete"
-                    )
+                        # Salva no Banco de Dados
+                        db.add_candidatura(
+                            empresa, cargo, status_reg, path_pdf
+                        )
+                        status_ui.update(
+                            label="✅ Pipeline Concluído!", state="complete"
+                        )
 
-                    # Botão para resetar a tela manualmente,
-                    # evitando sumir o download
-                    if st.button("🔄 Finalizar e Atualizar Dashboard"):
-                        st.rerun()
+                        # Botão para resetar a tela manualmente,
+                        # evitando sumir o download
+                        if st.button("🔄 Finalizar e Atualizar Dashboard"):
+                            st.rerun()
 
-                except Exception as err:
-                    st.error(f"❌ Erro no processamento: {err}")
+                    except Exception as err:
+                        st.error(f"❌ Erro no processamento: {err}")
 
 # 4. GESTÃO DE DADOS (DASHBOARD E CRUD)
 if not df.empty:

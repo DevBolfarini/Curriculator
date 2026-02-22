@@ -118,3 +118,52 @@ def obter_prompt(canal: str, empresa: str, cargo: str) -> str:
     ]
 
     return "\n".join(prompt_lines)
+
+
+def obter_prompt_gupy(
+    experiencia: str,
+    descricao_vaga: str,
+    comando_final: str = "",
+) -> str:
+    """Constrói o prompt para a geração do texto 'Apresente-se' pela Alia IA.
+
+    Observação: a experiência do candidato será extraída do arquivo PDF
+    enviado (`linkedin.pdf`). Não é necessário que o usuário cole a
+    experiência; a função orienta o modelo a analisar o PDF e usar os pontos
+    relevantes para conectar à vaga.
+    """
+
+    final_instruction = (
+        comando_final
+        if comando_final and comando_final.strip()
+        else (
+            "Escreva um texto de apresentação em primeira pessoa, "
+            "conectando a experiência extraída do PDF aos desafios da vaga. "
+            "Máximo 1500 caracteres, tom persuasivo e profissional. "
+        )
+    )
+
+    prompt = (
+        "Você é Alia IA, uma especialista em carreira e coach de "
+        "recolocação profissional. "
+        "Seu tom é encorajador, prático e voltado para destacar o candidato."
+        "\n\n"
+        "ATENÇÃO: Analise o PDF do candidato que eu irei fornecer e extraia os "
+        "principais pontos da experiência profissional (responsabilidades, "
+        "resultados e skills) para que sejam relacionados à vaga abaixo.\n\n"
+        "Contexto da vaga (descrição):\n"
+        f"{descricao_vaga}\n\n"
+        "Instruções para produção (siga RIGOROSAMENTE):\n"
+        "- Extraia e use informações do PDF fornecido.\n"
+        "- Escreva o texto em primeira pessoa.\n"
+        "- Conecte diretamente a experiência do candidato com os principais "
+        "desafios/atividades da vaga.\n"
+        "- Seja persuasivo, objetivo e profissional.\n"
+        "- Máximo 1500 caracteres.\n"
+        "- NÃO faça perguntas ao final, nem inclua CTAs ou solicitações de confirmação.\n\n"
+        "RETORNE APENAS O TEXTO DA CARTA DE APRESENTAÇÃO: NÃO inclua saudações da assistente, explicações, instruções, metadados, ou qualquer texto adicional. Comece diretamente com o texto que deve ser colado no campo 'Apresente-se'.\n\n"
+        "TEXTO A GERAR:\n"
+        f"{final_instruction}\n"
+    )
+
+    return prompt
