@@ -43,25 +43,40 @@ Dashboard MIS: Visualização clara de métricas como "Total Enviado", "Vagas Gu
 
 🚀 Como Executar o Projeto
 
-Clone o repositório:
-```bash
-git clone https://github.com/DevBolfarini/gerador_cv.git
+1. Clonar o Repositório
+```Bash
+git clone https://github.com/DevBolfarini/Curriculator.git cd Curriculator
 ```
 
-Instale as dependências:
-```bash 
+2. Configurar Ambiente Virtual (Recomendado)
+```Bash 
+python -m venv venv
+# No Windows:
+venv\Scripts\activate
+# No Linux/Mac:
+source venv/bin/activate
+```
+
+3. Instalar Dependências
+
+```Bash
 pip install -r requirements.txt
 ```
 
-Configuração de Ambiente:
-Crie um arquivo .env na raiz.
-
-Adicione sua chave: GOOGLE_API_KEY=SUA_CHAVE_AQUI.
-
-Inicie a aplicação:
-```bash 
-streamlit run app.py
+4. Configuração de Variáveis de Ambiente
+Para segurança, crie o arquivo .env na raiz do projeto através do seu terminal:
+No Windows (PowerShell):
+```PowerShell
+echo "GOOGLE_API_KEY=SUA_CHAVE_AQUI" > .env
+```
+No Linux / Mac / Git Bash:
+```Bash
+echo "GOOGLE_API_KEY=SUA_CHAVE_AQUI" >> .env
 ```
 
+5. Iniciar a Aplicação
+```Bash
+streamlit run app.py
+```
 
 Denis Bolfarini | LinkedIn | Estudante de Ciência da Computação (UNIVESP)
