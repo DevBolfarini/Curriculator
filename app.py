@@ -29,9 +29,10 @@ df = db.get_df()
 if not df.empty:
     m1, m2, m3 = st.columns(3)
     m1.metric("Total Enviado", len(df))
-    m2.metric("Vagas Gupy", len(df[df['status'].str.contains("Gupy", na=False)]))
+    gupy_count = len(df[df['status'].str.contains("Gupy", na=False)])
+    m2.metric("Vagas Gupy", gupy_count)
     m3.metric("Entrevistas", len(df[df['status'] == 'Entrevista']))
-    
+
     if st.sidebar.button("📊 Exportar Relatório Excel"):
         df.to_excel("controle_dados/Relatorio_Exportado.xlsx", index=False)
         st.sidebar.success("✅ Excel gerado com sucesso!")
@@ -43,13 +44,24 @@ with st.expander("📝 Nova Candidatura", expanded=True):
     empresa = col1.text_input("Nome da Empresa")
     cargo = col2.text_input("Cargo Desejado")
     texto_vaga = st.text_area("Descrição da Vaga", height=150)
-    canal = st.radio("Canal de Envio:", ["Gupy (Apresente-se)", "E-mail (PDF + Texto)", "Currículo (Apenas PDF)"], horizontal=True)
+    canal = st.radio(
+        "Canal de Envio:",
+        [
+            "Gupy (Apresente-se)",
+            "E-mail (PDF + Texto)",
+            "Currículo (Apenas PDF)",
+        ],
+        horizontal=True,
+    )
 
     if st.button("🚀 Processar Inteligência"):
         if not empresa or not cargo or not texto_vaga:
             st.warning("Preencha todos os campos obrigatórios.")
         else:
-            with st.status("🧠 Curriculator em execução...", expanded=True) as status_ui:
+            with st.status(
+                "🧠 Curriculator em execução...",
+                expanded=True
+            ) as status_ui:
                 try:
                     status_ui.write("📤 Analisando linkedin.pdf...")
                     arquivo_cv = cliente.files.upload(file="linkedin.pdf")
@@ -73,7 +85,6 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                             "🎨 Tratando dados e gerando modelo SempreIT..."
                         )
 
-                        # Limpeza de JSON (Hotfix de Parse)
                         conteudo_bruto = resposta.text.strip()
                         if "```json" in conteudo_bruto:
                             conteudo_limpo = (
@@ -100,12 +111,10 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                                 height=150,
                             )
 
-                        # GERAÇÃO DO PDF NOVO (SERVICES.PY)
                         path_pdf = gerar_pdf(dados_json, empresa)
 
                         st.success("✅ Currículo gerado com sucesso!")
 
-                        # BOTÃO DE DOWNLOAD FIXO
                         with open(path_pdf, "rb") as f:
                             st.download_button(
                                 label="📥 BAIXAR CURRÍCULO AGORA",
@@ -117,9 +126,12 @@ with st.expander("📝 Nova Candidatura", expanded=True):
 
                     # Salva no Banco de Dados
                     db.add_candidatura(empresa, cargo, status_reg, path_pdf)
-                    status_ui.update(label="✅ Pipeline Concluído!", state="complete")
+                    status_ui.update(
+                        label="✅ Pipeline Concluído!", state="complete"
+                    )
 
-                    # Botão para resetar a tela manualmente, evitando sumir o download
+                    # Botão para resetar a tela manualmente,
+                    # evitando sumir o download
                     if st.button("🔄 Finalizar e Atualizar Dashboard"):
                         st.rerun()
 
@@ -140,13 +152,19 @@ if not df.empty:
             y="candidaturas",
             color_discrete_sequence=["#1a3a5a"],
         )
-        fig.update_layout(xaxis_type="category", yaxis_range=[0, 10], height=350)
+        fig.update_layout(
+            xaxis_type="category",
+            yaxis_range=[0, 10],
+            height=350,
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     with col_manage:
         st.subheader("🛠️ Gestão")
         df["Display"] = df["id"].astype(str) + " - " + df["empresa"]
-        selecao = st.selectbox("Selecione um registro:", df["Display"].tolist())
+        selecao = st.selectbox(
+            "Selecione um registro:", df["Display"].tolist()
+        )
         id_sel = int(selecao.split(" - ")[0])
 
         c1, c2 = st.columns(2)
@@ -154,12 +172,15 @@ if not df.empty:
             db.delete_reg(id_sel)
             st.rerun()
 
-        novo_st = st.selectbox(
-            "Status:", ["Enviado", "Entrevista", "Teste", "Reprovado", "Contratado"]
-        )
+        status_options = [
+            "Enviado", "Entrevista", "Teste", "Reprovado", "Contratado"
+        ]
+        novo_st = st.selectbox("Status:", status_options)
         if st.button("✅ SALVAR"):
             db.update_status(id_sel, novo_st)
             st.rerun()
 
     st.subheader("📋 Histórico Completo (SQLite)")
-    st.dataframe(df.drop(columns=["Display"]).iloc[::-1], use_container_width=True)
+    st.dataframe(
+        df.drop(columns=["Display"]).iloc[::-1], use_container_width=True
+    )
