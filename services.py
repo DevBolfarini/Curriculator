@@ -87,34 +87,34 @@ def gerar_pdf(dados: dict, empresa: str) -> str:
 
 
 def obter_prompt(canal: str, empresa: str, cargo: str) -> str:
-    """Retorna o prompt estruturado para a IA"""
-    instr_email = (
-        '"email_corpo": "texto para o e-mail"' if "E-mail" in canal else ""
-    )
-
+    """Retorna o prompt estruturado para a IA de acordo com o canal escolhido"""
+    
     prompt_lines = [
-        "Atue como Especialista em Recrutamento. Analise o PDF e a vaga "
-        f"para {cargo} na {empresa}.",
-        "Retorne RIGOROSAMENTE um JSON com:",
+        f"Você é um assistente de carreira ajudando Denis Bolfarini a se candidatar para a vaga de {cargo} na {empresa}.",
+        "Analise o PDF do currículo original fornecido e a descrição da vaga.",
+        "Sua tarefa é extrair e adaptar as informações do currículo para que fiquem perfeitamente alinhadas com a vaga.",
+        "Retorne RIGOROSAMENTE um JSON com a seguinte estrutura:",
         "{",
         '  "nome": "Denis Bolfarini",',
-        '  "contato": "denis.bolfarini@gmail.com | 11948103499 | '
-        'São Paulo, SP",',
-        '  "resumo": "Resumo focado em dados",',
-        '  "habilidades": ["item1", "item2"],',
+        '  "contato": "denis.bolfarini@gmail.com | 11948103499 | São Paulo, SP",',
+        '  "resumo": "Resumo profissional adaptado focando nas exigências da vaga.",',
+        '  "habilidades": ["habilidade 1", "habilidade 2"],',
         '  "experiencias": [',
-        '    { "cargo": "título", "empresa": "nome", '
-        '"periodo": "datas", "conquistas": ["ponto1"] }',
-        "  ],",
-        '  "formacao": ["graduação"],',
+        '    { "cargo": "Título", "empresa": "Nome", "periodo": "datas", "conquistas": ["resultado 1", "resultado 2"] }',
+        '  ],',
+        '  "formacao": ["Sua Graduação / Curso"]'
     ]
 
-    if instr_email:
-        prompt_lines.append(f"  {instr_email}")
+    # Se a opção escolhida for E-mail, instruímos a IA a criar a estrutura completa
+    if "E-mail" in canal:
+        prompt_lines[-1] += ","
+        prompt_lines.append(
+            '  "email_corpo": "Redija o e-mail COMPLETO em PRIMEIRA PESSOA. Obrigatório: 1) Saudação inicial (ex: Prezado(a) Recrutador(a) da [Empresa]); 2) Texto de apresentação persuasivo conectando sua experiência à vaga; 3) Despedida profissional; 4) Assinatura final com o nome Denis Bolfarini e os contatos (telefone e e-mail) extraídos do currículo."'
+        )
 
     prompt_lines += [
         "}",
-        "Mantenha os dados reais do PDF e use KPIs.",
+        "ATENÇÃO: Mantenha os dados reais do PDF, use KPIs onde existirem e não invente experiências."
     ]
 
     return "\n".join(prompt_lines)
