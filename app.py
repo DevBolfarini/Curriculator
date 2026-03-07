@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import json
 from google import genai
+from google.genai import types  # <-- IMPORTAÇÃO ADICIONADA AQUI
 from dotenv import load_dotenv
 import plotly.express as px
 
@@ -196,6 +197,10 @@ with st.expander("📝 Nova Candidatura", expanded=True):
                         resposta = cliente.models.generate_content(
                             model="gemini-2.5-flash",
                             contents=[arquivo_cv, prompt, texto_vaga],
+                            # <-- CONFIGURAÇÃO ADICIONADA AQUI:
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                            )
                         )
 
                         status_reg = f"Enviado ({canal})"

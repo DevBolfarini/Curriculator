@@ -87,34 +87,46 @@ def gerar_pdf(dados: dict, empresa: str) -> str:
 
 
 def obter_prompt(canal: str, empresa: str, cargo: str) -> str:
-    """Retorna o prompt estruturado para a IA de acordo com o canal escolhido"""
-    
+    """Retorna prompt estruturado para a IA de acordo com o canal escolhido"""
+
     prompt_lines = [
-        f"Você é um assistente de carreira ajudando Denis Bolfarini a se candidatar para a vaga de {cargo} na {empresa}.",
+        f"Você é um assistente de carreira ajudando Denis Bolfarini "
+        f"a se candidatar para a vaga de {cargo} na {empresa}.",
         "Analise o PDF do currículo original fornecido e a descrição da vaga.",
-        "Sua tarefa é extrair e adaptar as informações do currículo para que fiquem perfeitamente alinhadas com a vaga.",
+        "Sua tarefa é extrair e adaptar as informações do currículo "
+        "para que fiquem perfeitamente alinhadas com a vaga.",
         "Retorne RIGOROSAMENTE um JSON com a seguinte estrutura:",
         "{",
         '  "nome": "Denis Bolfarini",',
-        '  "contato": "denis.bolfarini@gmail.com | 11948103499 | São Paulo, SP",',
-        '  "resumo": "Resumo profissional adaptado focando nas exigências da vaga.",',
+        '  "contato": "denis.bolfarini@gmail.com | 11948103499 | '
+        'São Paulo, SP",',
+        '  "resumo": "Resumo profissional adaptado focando nas '
+        'exigências da vaga.",',
         '  "habilidades": ["habilidade 1", "habilidade 2"],',
         '  "experiencias": [',
-        '    { "cargo": "Título", "empresa": "Nome", "periodo": "datas", "conquistas": ["resultado 1", "resultado 2"] }',
+        '    { "cargo": "Título", "empresa": "Nome", "periodo": "datas", '
+        '"conquistas": ["resultado 1", "resultado 2"] }',
         '  ],',
         '  "formacao": ["Sua Graduação / Curso"]'
     ]
 
-    # Se a opção escolhida for E-mail, instruímos a IA a criar a estrutura completa
+    # Se a opção for E-mail, instruímos a IA a criar a estrutura completa
     if "E-mail" in canal:
         prompt_lines[-1] += ","
         prompt_lines.append(
-            '  "email_corpo": "Redija o e-mail COMPLETO em PRIMEIRA PESSOA. Obrigatório: 1) Saudação inicial (ex: Prezado(a) Recrutador(a) da [Empresa]); 2) Texto de apresentação persuasivo conectando sua experiência à vaga; 3) Despedida profissional; 4) Assinatura final com o nome Denis Bolfarini e os contatos (telefone e e-mail) extraídos do currículo."'
+            '  "email_corpo": "Redija o e-mail COMPLETO em PRIMEIRA '
+            'PESSOA. Obrigatório: 1) Saudação inicial (ex: Prezado(a) '
+            'Recrutador(a) da [Empresa]); 2) Texto de apresentação '
+            'persuasivo conectando sua experiência à vaga; 3) '
+            'Despedida profissional; 4) Assinatura final com o nome '
+            'Denis Bolfarini e os contatos (telefone e e-mail) '
+            'extraídos do currículo."'
         )
 
     prompt_lines += [
         "}",
-        "ATENÇÃO: Mantenha os dados reais do PDF, use KPIs onde existirem e não invente experiências."
+        "ATENÇÃO: Mantenha os dados reais do PDF, use KPIs onde existirem "
+        "e não invente experiências."
     ]
 
     return "\n".join(prompt_lines)
@@ -125,12 +137,9 @@ def obter_prompt_gupy(
     descricao_vaga: str,
     comando_final: str = "",
 ) -> str:
-    """Constrói o prompt para a geração do texto 'Apresente-se' pela Alia IA.
+    """Constrói o prompt para a geração do texto 'Apresente-se'.
 
-    Observação: a experiência do candidato será extraída do arquivo PDF
-    enviado (`linkedin.pdf`). Não é necessário que o usuário cole a
-    experiência; a função orienta o modelo a analisar o PDF e usar os pontos
-    relevantes para conectar à vaga.
+    A experiência do candidato será extraída do arquivo PDF enviado.
     """
 
     final_instruction = (
@@ -148,8 +157,8 @@ def obter_prompt_gupy(
         "recolocação profissional. "
         "Seu tom é encorajador, prático e voltado para destacar o candidato."
         "\n\n"
-        "ATENÇÃO: Analise o PDF do candidato que eu irei fornecer e extraia os "
-        "principais pontos da experiência profissional (responsabilidades, "
+        "ATENÇÃO: Analise o PDF do candidato que eu irei fornecer e extraia "
+        "os principais pontos da experiência profissional (responsabilidades, "
         "resultados e skills) para que sejam relacionados à vaga abaixo.\n\n"
         "Contexto da vaga (descrição):\n"
         f"{descricao_vaga}\n\n"
@@ -160,8 +169,12 @@ def obter_prompt_gupy(
         "desafios/atividades da vaga.\n"
         "- Seja persuasivo, objetivo e profissional.\n"
         "- Máximo 1500 caracteres.\n"
-        "- NÃO faça perguntas ao final, nem inclua CTAs ou solicitações de confirmação.\n\n"
-        "RETORNE APENAS O TEXTO DA CARTA DE APRESENTAÇÃO: NÃO inclua saudações da assistente, explicações, instruções, metadados, ou qualquer texto adicional. Comece diretamente com o texto que deve ser colado no campo 'Apresente-se'.\n\n"
+        "- NÃO faça perguntas ao final, nem inclua CTAs ou solicitações "
+        "de confirmação.\n\n"
+        "RETORNE APENAS O TEXTO DA CARTA DE APRESENTAÇÃO: NÃO inclua "
+        "saudações da assistente, explicações, instruções, metadados, "
+        "ou qualquer texto adicional. Comece diretamente com o texto "
+        "que deve ser colado no campo 'Apresente-se'.\n\n"
         "TEXTO A GERAR:\n"
         f"{final_instruction}\n"
     )
