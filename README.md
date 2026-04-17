@@ -11,11 +11,12 @@ Solução de **Engenharia de Software e Data Analytics** para automatizar a pers
 | Camada | Tecnologia |
 |--------|-----------|
 | **Interface** | Streamlit (UI Interativa com Dashboard Premium) |
-| **Inteligência Artificial** | Google Gemini 2.5 Flash API (NLP e Análise Semântica) |
+| **Inteligência Artificial** | Google Gemini 2.0 Flash API (NLP e Análise Semântica) |
 | **Linguagem & Processamento** | Python 3.10+ com Pandas |
 | **Banco de Dados** | SQLite (Persistência relacional com migrations automáticas) |
 | **Visualização de Dados** | Plotly (Funil de conversão, skills ranking, distribuição por canal) |
 | **Engine de PDF** | xhtml2pdf (Templates HTML/CSS no padrão SempreIT) |
+| **Mecanismo de Resiliência** | Fallback Automático entre modelos e gestão de erros 429 |
 | **Web Scraping** | BeautifulSoup + Requests (Extração de dados de vagas via URL) |
 
 ---
