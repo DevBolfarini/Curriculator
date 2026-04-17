@@ -1,0 +1,10 @@
+streamlit
+google-genai
+python-dotenv
+pandas
+plotly
+xhtml2pdf
+openpyxl
+requests
+beautifulsoup4
+tenacity

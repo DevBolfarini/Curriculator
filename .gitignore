@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pdf
+controle_dados/
+venv/
+*.stackdump
