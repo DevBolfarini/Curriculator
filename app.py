@@ -21,7 +21,7 @@ from services import (
 )
 
 # 1. SETUP, SEGURANÇA E AMBIENTE
-load_dotenv()
+load_dotenv(override=True)
 API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not API_KEY:
@@ -45,6 +45,7 @@ def call_gemini_with_fallback(func, *args, **kwargs):
     """
     modelos_fallback = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-flash-latest"]
     
+    import time
     for i, modelo in enumerate(modelos_fallback):
         try:
             # Garante que estamos usando o modelo da iteração atual
@@ -53,7 +54,8 @@ def call_gemini_with_fallback(func, *args, **kwargs):
         except Exception as e:
             # Se for erro de cota e não for o último modelo da lista, tenta o próximo
             if ("429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)) and i < len(modelos_fallback) - 1:
-                st.warning(f"⚠️ Cota do modelo {modelo} excedida. Acionando fallback para {modelos_fallback[i+1]}...")
+                st.warning(f"⚠️ Cota do modelo {modelo} excedida. Aguardando fallback para {modelos_fallback[i+1]}...")
+                time.sleep(2)  # Delay para evitar hit de RPM consecutivo
                 continue
             # Se for o último modelo ou outro tipo de erro, propaga a exceção
             raise e
@@ -185,6 +187,13 @@ file_cv = st.sidebar.file_uploader(
     type=["pdf"],
     help="Este arquivo será usado pela IA para adaptar sua experiência.",
 )
+
+# Diagnóstico de API Key (Mascarada)
+if API_KEY:
+    masked_key = f"{API_KEY[:6]}...{API_KEY[-4:]}"
+    st.sidebar.caption(f"🔑 API Key ativa: `{masked_key}`")
+else:
+    st.sidebar.error("❌ API Key não detectada.")
 
 # Cache do upload do PDF
 @st.cache_resource
