@@ -34,7 +34,7 @@ db = DatabaseManager()
 def call_gemini_with_fallback(func, *args, **kwargs):
     """
     Tenta chamar a API do Gemini com fallback automático entre modelos
-    caso ocorra erro de cota (429).
+    caso ocorra erro de cota (429) ou indisponibilidade (503).
     Usa gemini-2.5-flash como principal (gratuito, limites altos).
     """
     import time
@@ -53,22 +53,32 @@ def call_gemini_with_fallback(func, *args, **kwargs):
         except Exception as e:
             erro_str = str(e)
             is_quota_error = "429" in erro_str or "RESOURCE_EXHAUSTED" in erro_str
+            is_unavailable = "503" in erro_str or "UNAVAILABLE" in erro_str
+            is_retryable = is_quota_error or is_unavailable
             
-            if is_quota_error and i < len(modelos_fallback) - 1:
+            if is_retryable and i < len(modelos_fallback) - 1:
+                motivo = "cota excedida" if is_quota_error else "temporariamente indisponível"
                 st.warning(
-                    f"⚠️ Cota do modelo `{modelo}` excedida. "
+                    f"⚠️ Modelo `{modelo}` {motivo}. "
                     f"Tentando modelo alternativo `{modelos_fallback[i+1]}`..."
                 )
-                time.sleep(3)  # Aguarda antes de tentar o próximo modelo
+                time.sleep(5 if is_unavailable else 3)
                 continue
             
-            # Se for erro de cota no último modelo, mensagem amigável
-            if is_quota_error:
-                raise Exception(
-                    "🚫 Todos os modelos estão com cota excedida. "
-                    "Aguarde 1-2 minutos e tente novamente. "
-                    "Isso acontece por excesso de requisições, não por problema na API Key."
-                ) from e
+            # Se todos os modelos falharam com erro retryable
+            if is_retryable:
+                if is_unavailable:
+                    raise Exception(
+                        "🚫 Todos os modelos estão temporariamente indisponíveis "
+                        "por alta demanda no Google. Aguarde 1-2 minutos e tente novamente. "
+                        "Isso é um problema temporário do lado do Google, não da sua API Key."
+                    ) from e
+                else:
+                    raise Exception(
+                        "🚫 Todos os modelos estão com cota excedida. "
+                        "Aguarde 1-2 minutos e tente novamente. "
+                        "Isso acontece por excesso de requisições, não por problema na API Key."
+                    ) from e
             
             # Outro tipo de erro, propaga normalmente
             raise e
