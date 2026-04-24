@@ -6,7 +6,6 @@ from google.genai import types, errors
 from dotenv import load_dotenv
 import plotly.express as px
 from datetime import datetime
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 # Importando os módulos do projeto modularizado
 from database import DatabaseManager
@@ -31,33 +30,47 @@ if not API_KEY:
 cliente = genai.Client(api_key=API_KEY)
 db = DatabaseManager()
 
-# Decorador para retentativas em caso de erro de cota (429)
-def is_rate_limit_error(exception):
-    return "429" in str(exception) or "RESOURCE_EXHAUSTED" in str(exception)
-
-def call_gemini_safe(func, *args, **kwargs):
-    return func(*args, **kwargs)
-
+# Função auxiliar para chamadas à API com fallback entre modelos
 def call_gemini_with_fallback(func, *args, **kwargs):
     """
     Tenta chamar a API do Gemini com fallback automático entre modelos
     caso ocorra erro de cota (429).
+    Usa gemini-2.5-flash como principal (gratuito, limites altos).
     """
-    modelos_fallback = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-flash-latest"]
-    
     import time
+    
+    # Modelos em ordem de preferência (2.5-flash tem limites mais generosos)
+    modelos_fallback = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+    ]
+    
     for i, modelo in enumerate(modelos_fallback):
         try:
-            # Garante que estamos usando o modelo da iteração atual
-            kwargs['model'] = modelo 
-            return call_gemini_safe(func, *args, **kwargs)
+            kwargs['model'] = modelo
+            return func(*args, **kwargs)
         except Exception as e:
-            # Se for erro de cota e não for o último modelo da lista, tenta o próximo
-            if ("429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)) and i < len(modelos_fallback) - 1:
-                st.warning(f"⚠️ Cota do modelo {modelo} excedida. Aguardando fallback para {modelos_fallback[i+1]}...")
-                time.sleep(2)  # Delay para evitar hit de RPM consecutivo
+            erro_str = str(e)
+            is_quota_error = "429" in erro_str or "RESOURCE_EXHAUSTED" in erro_str
+            
+            if is_quota_error and i < len(modelos_fallback) - 1:
+                st.warning(
+                    f"⚠️ Cota do modelo `{modelo}` excedida. "
+                    f"Tentando modelo alternativo `{modelos_fallback[i+1]}`..."
+                )
+                time.sleep(3)  # Aguarda antes de tentar o próximo modelo
                 continue
-            # Se for o último modelo ou outro tipo de erro, propaga a exceção
+            
+            # Se for erro de cota no último modelo, mensagem amigável
+            if is_quota_error:
+                raise Exception(
+                    "🚫 Todos os modelos estão com cota excedida. "
+                    "Aguarde 1-2 minutos e tente novamente. "
+                    "Isso acontece por excesso de requisições, não por problema na API Key."
+                ) from e
+            
+            # Outro tipo de erro, propaga normalmente
             raise e
 
 # Configuração da Interface
@@ -470,7 +483,7 @@ with tab_dashboard:
                             try:
                                 resp_fu = call_gemini_with_fallback(
                                     cliente.models.generate_content,
-                                    model="gemini-2.0-flash",
+                                    model="gemini-2.5-flash",
                                     contents=[prompt_fu],
                                 )
                                 texto_fu = clean_ai_response(resp_fu.text)
@@ -573,7 +586,7 @@ with tab_candidatura:
                 )
                 resp_ext = call_gemini_with_fallback(
                     cliente.models.generate_content,
-                    model="gemini-2.0-flash",
+                    model="gemini-2.5-flash",
                     contents=[prompt_ext],
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
@@ -700,7 +713,7 @@ with tab_candidatura:
                         status_ui.write("⚙️ Consultando Gemini...")
                         resposta = call_gemini_with_fallback(
                             cliente.models.generate_content,
-                            model="gemini-2.0-flash",
+                            model="gemini-2.5-flash",
                             contents=[arquivo_cv, prompt_gupy],
                         )
 
@@ -749,7 +762,7 @@ with tab_candidatura:
                         status_ui.write("⚙️ Consultando Gemini...")
                         resposta = call_gemini_with_fallback(
                             cliente.models.generate_content,
-                            model="gemini-2.0-flash",
+                            model="gemini-2.5-flash",
                             contents=[arquivo_cv, prompt, texto_vaga],
                             config=types.GenerateContentConfig(
                                 response_mime_type="application/json",
