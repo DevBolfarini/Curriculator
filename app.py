@@ -36,52 +36,75 @@ def call_gemini_with_fallback(func, *args, **kwargs):
     Tenta chamar a API do Gemini com fallback automático entre modelos
     caso ocorra erro de cota (429) ou indisponibilidade (503).
     Usa gemini-2.5-flash como principal (gratuito, limites altos).
+    Cada modelo é tentado até 2 vezes antes de pular para o próximo.
     """
     import time
     
-    # Modelos em ordem de preferência (2.5-flash tem limites mais generosos)
+    # Modelos em ordem de preferência — expandido com novos modelos disponíveis
     modelos_fallback = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
+        "gemini-2.5-flash-lite",
         "gemini-2.0-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-3.1-flash-lite-preview",
     ]
     
+    MAX_RETRIES_PER_MODEL = 2  # Tentativas por modelo antes de pular
+    last_exception = None
+    last_was_quota = False
+    
     for i, modelo in enumerate(modelos_fallback):
-        try:
-            kwargs['model'] = modelo
-            return func(*args, **kwargs)
-        except Exception as e:
-            erro_str = str(e)
-            is_quota_error = "429" in erro_str or "RESOURCE_EXHAUSTED" in erro_str
-            is_unavailable = "503" in erro_str or "UNAVAILABLE" in erro_str
-            is_retryable = is_quota_error or is_unavailable
-            
-            if is_retryable and i < len(modelos_fallback) - 1:
-                motivo = "cota excedida" if is_quota_error else "temporariamente indisponível"
-                st.warning(
-                    f"⚠️ Modelo `{modelo}` {motivo}. "
-                    f"Tentando modelo alternativo `{modelos_fallback[i+1]}`..."
-                )
-                time.sleep(5 if is_unavailable else 3)
-                continue
-            
-            # Se todos os modelos falharam com erro retryable
-            if is_retryable:
-                if is_unavailable:
-                    raise Exception(
-                        "🚫 Todos os modelos estão temporariamente indisponíveis "
-                        "por alta demanda no Google. Aguarde 1-2 minutos e tente novamente. "
-                        "Isso é um problema temporário do lado do Google, não da sua API Key."
-                    ) from e
-                else:
-                    raise Exception(
-                        "🚫 Todos os modelos estão com cota excedida. "
-                        "Aguarde 1-2 minutos e tente novamente. "
-                        "Isso acontece por excesso de requisições, não por problema na API Key."
-                    ) from e
-            
-            # Outro tipo de erro, propaga normalmente
-            raise e
+        for attempt in range(MAX_RETRIES_PER_MODEL):
+            try:
+                kwargs['model'] = modelo
+                return func(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                erro_str = str(e)
+                is_quota_error = "429" in erro_str or "RESOURCE_EXHAUSTED" in erro_str
+                is_unavailable = "503" in erro_str or "UNAVAILABLE" in erro_str
+                is_retryable = is_quota_error or is_unavailable
+                last_was_quota = is_quota_error
+                
+                if not is_retryable:
+                    # Erro não-retryable (ex: permissão, formato inválido) — propaga
+                    raise e
+                
+                # Se ainda tem retries neste modelo, espera e tenta de novo
+                if attempt < MAX_RETRIES_PER_MODEL - 1:
+                    wait_secs = 8 if is_unavailable else 5
+                    st.info(
+                        f"⏳ Modelo `{modelo}` {('indisponível' if is_unavailable else 'cota atingida')}. "
+                        f"Retentando em {wait_secs}s... (tentativa {attempt + 2}/{MAX_RETRIES_PER_MODEL})"
+                    )
+                    time.sleep(wait_secs)
+                    continue
+                
+                # Esgotou retries deste modelo — tenta o próximo
+                if i < len(modelos_fallback) - 1:
+                    motivo = "cota excedida" if is_quota_error else "temporariamente indisponível"
+                    st.warning(
+                        f"⚠️ Modelo `{modelo}` {motivo}. "
+                        f"Tentando modelo alternativo `{modelos_fallback[i+1]}`..."
+                    )
+                    wait_secs = 10 if is_unavailable else 5
+                    time.sleep(wait_secs)
+                    break  # Sai do loop de retries, vai para o próximo modelo
+    
+    # Todos os modelos e retries falharam
+    if last_was_quota:
+        raise Exception(
+            "🚫 Todos os modelos estão com cota excedida. "
+            "Aguarde 1-2 minutos e tente novamente. "
+            "Isso acontece por excesso de requisições, não por problema na API Key."
+        ) from last_exception
+    else:
+        raise Exception(
+            "🚫 Todos os modelos estão temporariamente indisponíveis "
+            "por alta demanda no Google. Aguarde 1-2 minutos e tente novamente. "
+            "Isso é um problema temporário do lado do Google, não da sua API Key."
+        ) from last_exception
 
 # Configuração da Interface
 st.set_page_config(page_title="Curriculator v5.0", layout="wide")
