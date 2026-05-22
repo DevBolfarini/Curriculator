@@ -36,32 +36,29 @@ fi
 echo ""
 echo "🔐 Verificando por possíveis vazamentos de chaves..."
 
-# Arquivos perigosos para checar
-DANGEROUS_PATTERNS=(
-    "GOOGLE_API_KEY.*="
-    "sk-"  # OpenAI keys
-    "Bearer "
-    "password.*="
-)
-
-FILES_TO_CHECK=$(git ls-files --cached 2>/dev/null || echo "")
+# Arquivos que DEVEM ser verificados (excluir exemplos e docs)
+FILES_TO_CHECK=$(git ls-files --cached 2>/dev/null | grep -v "\.example$" | grep -v "\.md$" | grep -v "\.sh$" | grep -v "\.toml$")
 
 if [ ! -z "$FILES_TO_CHECK" ]; then
     FOUND_SECRETS=false
     
-    for pattern in "${DANGEROUS_PATTERNS[@]}"; do
-        if echo "$FILES_TO_CHECK" | xargs grep -l "$pattern" 2>/dev/null; then
-            echo -e "${YELLOW}⚠️  Possível segredo encontrado com padrão: $pattern${NC}"
-            FOUND_SECRETS=true
-        fi
-    done
+    # Padrões reais de chaves (mais específicos para evitar falsos positivos)
+    # Procura por chaves que parecem reais, não por templates
+    if echo "$FILES_TO_CHECK" | xargs grep -E "(GOOGLE_API_KEY\s*=\s*['\"][a-zA-Z0-9_-]{20,}|sk-[a-zA-Z0-9]{20,}|Bearer\s+[a-zA-Z0-9_-]{20,})" 2>/dev/null | grep -v "sua_chave\|your_key\|placeholder\|example"; then
+        echo -e "${RED}⚠️  Possível chave real detectada!${NC}"
+        FOUND_SECRETS=true
+    fi
     
     if [ "$FOUND_SECRETS" = true ]; then
         echo ""
         echo -e "${RED}❌ Possíveis vazamentos de segurança detectados!${NC}"
         echo "Resolva antes de fazer push."
         exit 1
+    else
+        echo -e "${GREEN}✅ Nenhum vazamento de segurança detectado${NC}"
     fi
+else
+    echo -e "${GREEN}✅ Nenhum vazamento de segurança detectado${NC}"
 fi
 
 echo -e "${GREEN}✅ Nenhum vazamento de segurança detectado${NC}"

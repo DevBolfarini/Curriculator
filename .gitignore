@@ -48,5 +48,8 @@ temp/
 *.xlsx
 *.stackdump
 
+# Mac
+.DS_Store
+
 # Git
 .gitkeep
