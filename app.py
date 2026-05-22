@@ -21,10 +21,23 @@ from services import (
 
 # 1. SETUP, SEGURANÇA E AMBIENTE
 load_dotenv(override=True)
-API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Tenta obter a chave de: 1) Streamlit Secrets (cloud) 2) Variável de ambiente 3) .env
+try:
+    API_KEY = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+except:
+    API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not API_KEY:
-    st.error("❌ Erro Crítico: GOOGLE_API_KEY não encontrada no arquivo .env")
+    st.error(
+        "❌ Erro Crítico: GOOGLE_API_KEY não encontrada!\n\n"
+        "**Local (desenvolvimento):**\n"
+        "- Crie um arquivo `.env` com: `GOOGLE_API_KEY=sua_chave`\n"
+        "- Ou use: `mkdir -p ~/.streamlit && echo 'GOOGLE_API_KEY = \"sua_chave\"' > ~/.streamlit/secrets.toml`\n\n"
+        "**Streamlit Cloud (produção):**\n"
+        "- Vá em Settings ⚙️ → Secrets\n"
+        "- Adicione: `GOOGLE_API_KEY = \"sua_chave\"`"
+    )
     st.stop()
 
 cliente = genai.Client(api_key=API_KEY)

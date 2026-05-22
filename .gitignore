@@ -1,6 +1,52 @@
+# Environment variables
 .env
+.env.local
+.streamlit/secrets.toml
+
+# Python
 __pycache__/
-*.pdf
-controle_dados/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
 venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+controle_dados/candidaturas.db
+controle_dados/backups/
+curriculos_gerados/
+temp/
+*.pdf
+*.xlsx
 *.stackdump
+
+# Git
+.gitkeep

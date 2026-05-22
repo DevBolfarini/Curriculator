@@ -1,0 +1,32 @@
+# 🧪 Dependências de Desenvolvimento (extras)
+# 
+# Instale com: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# Linting e Formatação
+black==23.12.1
+flake8==6.1.0
+isort==5.13.2
+
+# Testes
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Type Checking
+mypy==1.7.1
+types-requests==2.31.0.10
+
+# Debugging
+ipython==8.18.1
+ipdb==0.13.13
+
+# Documentação
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+
+# Performance
+line-profiler==4.1.1
+
+# Análise de código
+pylint==3.0.3

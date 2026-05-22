@@ -6,7 +6,23 @@ Solução de **Engenharia de Software e Data Analytics** para automatizar a pers
 
 ---
 
-## 🛠️ Stack Tecnológica
+## � DEPLOY NA NUVEM
+
+### ⭐ Quer colocar no Streamlit Cloud?
+
+Você pode rodar essa aplicação **24/7 na nuvem**, sem precisar manter seu computador ligado!
+
+👉 **[CLIQUE AQUI PARA GUIA DE DEPLOYMENT](CLOUD_DEPLOYMENT.md)**
+
+**Resumo:**
+- ✅ Hospedagem gratuita (Streamlit Cloud)
+- ✅ Seu próprio domínio online
+- ✅ Acesso de qualquer lugar
+- ✅ Tempo de deploy: ~20 minutos
+
+---
+
+## �🛠️ Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|-----------|
