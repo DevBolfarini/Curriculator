@@ -4,7 +4,7 @@ from typing import List
 
 import requests
 from bs4 import BeautifulSoup
-from xhtml2pdf import pisa
+from weasyprint import HTML, CSS
 
 
 def extrair_texto_url(url: str) -> str:
@@ -217,8 +217,8 @@ def gerar_pdf(dados: dict, empresa: str) -> str:
     nome_arquivo = f"CV_Denis_{empresa.replace(' ', '_')}.pdf"
     caminho = os.path.join("curriculos_gerados", nome_arquivo)
 
-    with open(caminho, "w+b") as f:
-        pisa.CreatePDF(html_final, dest=f)
+    # Usar weasyprint para converter HTML em PDF
+    HTML(string=html_final).write_pdf(caminho)
 
     return caminho
 
