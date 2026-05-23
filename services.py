@@ -4,7 +4,12 @@ from typing import List
 
 import requests
 from bs4 import BeautifulSoup
-from weasyprint import HTML, CSS
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+from io import BytesIO
 
 
 def extrair_texto_url(url: str) -> str:
@@ -142,7 +147,13 @@ def clean_ai_response(text: str) -> str:
 
 
 def gerar_pdf(dados: dict, empresa: str) -> str:
-    """Gera o currículo completo no padrão visual SempreIT"""
+    """Gera o currículo em PDF usando ReportLab (compatível com Streamlit Cloud)"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
+    
     nome = dados.get("nome", "Denis Bolfarini")
     contato = dados.get(
         "contato",
@@ -153,73 +164,70 @@ def gerar_pdf(dados: dict, empresa: str) -> str:
     experiencias: List[dict] = dados.get("experiencias", [])
     formacao: List[str] = dados.get("formacao", [])
 
-    html_style = "".join(
-        [
-            "<style>",
-            "@page { size: A4; margin: 1.2cm; }",
-            "body { font-family: Helvetica, Arial, sans-serif; ",
-            "font-size: 9pt; color: #333; line-height: 1.4; }",
-            ".header { border-bottom: 2px solid #1a3a5a; ",
-            "padding-bottom: 5px; margin-bottom: 10px; }",
-            "h1 { color: #1a3a5a; font-size: 18pt; margin: 0; ",
-            "text-transform: uppercase; font-weight: bold; }",
-            ".contato { font-size: 9pt; color: #666; margin-top: 2px; }",
-            ".section-title { color: #1a3a5a; font-weight: bold; ",
-            "font-size: 11pt; border-bottom: 1px solid #ddd; ",
-            "text-transform: uppercase; margin-top: 15px; ",
-            "margin-bottom: 5px; }",
-            ".exp-item { margin-bottom: 10px; }",
-            ".exp-header { font-weight: bold; color: #222; ",
-            "font-size: 10pt; }",
-            "li { margin-bottom: 2px; text-align: justify; }",
-            "ul { margin-top: 3px; }",
-            "</style>",
-        ]
-    )
-
-    exp_html = ""
-    for exp in experiencias:
-        cargo_exp = exp.get("cargo", "Cargo")
-        emp = exp.get("empresa", "Empresa")
-        per = exp.get("periodo", "Período")
-        conquistas = exp.get("conquistas", [])
-        bullets = "".join([f"<li>{c}</li>" for c in conquistas])
-        exp_html += (
-            "<div class='exp-item'>"
-            f"<div class='exp-header'>{cargo_exp} | {emp} ({per})</div>"
-            f"<ul>{bullets}</ul></div>"
-        )
-
-    hab_html = ", ".join(habilidades)
-    form_html = "".join([f"<li>{f}</li>" for f in formacao])
-
-    html_final = "".join(
-        [
-            "<html><head>",
-            html_style,
-            "</head><body>",
-            "<div class='header'>",
-            f"<h1>{nome}</h1>",
-            f"<div class='contato'>{contato}</div></div>",
-            "<div class='section-title'>Resumo Profissional</div>",
-            f"<p>{resumo}</p>",
-            "<div class='section-title'>Habilidades Técnicas</div>",
-            f"<p>{hab_html}</p>",
-            "<div class='section-title'>Experiência Profissional</div>",
-            exp_html,
-            "<div class='section-title'>Formação e Certificações</div>",
-            f"<ul>{form_html}</ul>",
-            "</body></html>",
-        ]
-    )
-
     os.makedirs("curriculos_gerados", exist_ok=True)
     nome_arquivo = f"CV_Denis_{empresa.replace(' ', '_')}.pdf"
     caminho = os.path.join("curriculos_gerados", nome_arquivo)
 
-    # Usar weasyprint para converter HTML em PDF
-    HTML(string=html_final).write_pdf(caminho)
-
+    # Criar documento PDF
+    doc = SimpleDocTemplate(caminho, pagesize=A4, topMargin=1*cm, bottomMargin=1*cm)
+    story = []
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor='#1a3a5a',
+        spaceAfter=6,
+        alignment=TA_CENTER
+    )
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=11,
+        textColor='#1a3a5a',
+        spaceAfter=6,
+        spaceBefore=10,
+        alignment=TA_LEFT
+    )
+    
+    # Adicionar conteúdo
+    story.append(Paragraph(nome.upper(), title_style))
+    story.append(Paragraph(contato, styles['Normal']))
+    story.append(Spacer(1, 0.3*cm))
+    
+    if resumo:
+        story.append(Paragraph("RESUMO PROFISSIONAL", section_style))
+        story.append(Paragraph(resumo, styles['Normal']))
+        story.append(Spacer(1, 0.2*cm))
+    
+    if habilidades:
+        story.append(Paragraph("HABILIDADES TÉCNICAS", section_style))
+        story.append(Paragraph(", ".join(habilidades), styles['Normal']))
+        story.append(Spacer(1, 0.2*cm))
+    
+    if experiencias:
+        story.append(Paragraph("EXPERIÊNCIA PROFISSIONAL", section_style))
+        for exp in experiencias:
+            cargo = exp.get("cargo", "Cargo")
+            emp = exp.get("empresa", "Empresa")
+            per = exp.get("periodo", "Período")
+            conquistas = exp.get("conquistas", [])
+            
+            story.append(Paragraph(f"<b>{cargo}</b> | {emp} ({per})", styles['Normal']))
+            for c in conquistas:
+                story.append(Paragraph(f"• {c}", styles['Normal']))
+            story.append(Spacer(1, 0.15*cm))
+    
+    if formacao:
+        story.append(Paragraph("FORMAÇÃO E CERTIFICAÇÕES", section_style))
+        for f in formacao:
+            story.append(Paragraph(f"• {f}", styles['Normal']))
+    
+    # Gerar PDF
+    doc.build(story)
+    
     return caminho
 
 
